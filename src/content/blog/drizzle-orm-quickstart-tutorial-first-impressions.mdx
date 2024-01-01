@@ -1,0 +1,343 @@
+---
+title: 'Drizzle ORM Quickstart Tutorial and First Impressions'
+description: Drizzle ORM is a new ORM and potential prisma replacement. In this tutorial we'll walk through setting up a new project with Drizzle ORM and Postgres.
+pubDate: 2023-04-19
+heroImage: '/blog-placeholder-3.jpg'
+---
+
+This is a blog post about getting started with [drizzle-orm](https://github.com/drizzle-team/drizzle-orm) as a replacement for prisma. I'm going to focus on replacing what prisma does for me most commonly. That includes:
+
+- setting up a Postgres database using a schema
+- interacting with my database in a typesafe way
+- generating migrations by way of changing my schema
+- having those migrations synced to my database on deploy via github actions
+
+In terms of code artifacts, that means we'll be coding a drizzle schema, a drizzle client, and a github action to run migrations on deploy.
+
+## Let's go!
+
+👋 If you want to jump straight to the finished code and poke around, you can find it [here](https://github.com/tone-row/drizzle-demo).
+
+Create an empty project and initialize a package.json. I'll be using pnpm but any package manager will do. Let's start by installing drizzle in our project:
+
+```
+pnpm add drizzle-orm pg
+```
+
+```
+pnpm add -D @types/pg drizzle-kit typescript ts-node
+```
+
+Let's quickly create a `tsconfig.json` so we don't run into problems later:
+
+```json
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2020",
+    "jsx": "react",
+    "strictNullChecks": true,
+    "strictFunctionTypes": true
+  },
+  "exclude": ["node_modules", "**/node_modules/*"]
+}
+```
+
+Drizzle uses [pg (AKA node-postgres)](https://github.com/brianc/node-postgres) under the hood. The result of this seems to be that it's much faster than prisma. Here are some [benchmarks](https://github.com/drizzle-team/drizzle-northwind-benchmarks-pg#sample-runs) from the drizzle team.
+
+Drizzle allows for a single schema file or multiple schema files. I'm going to use a single schema file for this example. I'm going to call it `schema.ts` and put it in a `src/db` directory.
+
+Let's use the default schema, they suggest in the docs:
+
+```typescript
+// schema.ts
+import { pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name"),
+  phone: varchar("phone", { length: 256 }),
+});
+```
+
+This is a pretty simple schema. It's a table called `users` with three columns: `id`, `fullName`, and `phone`. The `id` column is a serial primary key, and the `phone` column is a varchar with a length of 256.
+
+Now we need to make a client. I'll create a file `src/db/db.ts` and put this in it:
+
+```typescript
+// db.ts
+import { pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+
+import { users } from "./schema";
+
+const pool = new Pool({
+  connectionString: "postgres://user:password@host:port/db",
+});
+
+export const db = drizzle(pool);
+```
+
+Again, straight from the docs. Now let's use [railway.app](https://railway.app/) (which has a generous free-tier) to spin up a postgres database and grab the connection string.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681915493/waogmcxpquxc64wgsrsf.png"
+  width="500"
+  alt="Creating a new postgres database on railway.app"
+/>
+
+We'll need an environment variable for our connection string so I'll add dotenv to my project:
+
+```
+pnpm add -D dotenv
+```
+
+And then I'll create a `.env` file in the root of my project and add the connection string to it:
+
+```
+DATABASE_URL=postgres://user:password@host:port/db
+```
+
+You can grab the connection string from your railway app's settings page.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681915493/pejq4cvedqrgokr6rli2.png"
+  width="500"
+  alt="Getting the connection string from railway.app"
+/>
+
+Now I can use that in my client:
+
+```typescript
+// db.ts
+import { pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import dotenv from "dotenv";
+
+import { users } from "./schema";
+
+dotenv.config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+export const db = drizzle(pool);
+```
+
+## Our first migration
+
+Now that we have a schema, a client, and a database, we need to apply our schema to the database. In prisma this is a one-step process but in drizzle it's two separate steps. First we generate our migration (an SQL file) and then we apply it.
+
+To generate the migration file, we use drizzle's cli called `drizzle-kit`, which was installed with drizzle-orm earlier.
+
+Let's add the following script to our `package.json`:
+
+```json
+"generate-migration": "drizzle-kit generate:pg --out src/db/migrations --schema src/db/schema.ts"
+```
+
+Now we can run `pnpm generate-migration` and it will generate a migration file for us in the folder we specified. Let's run it:
+
+```
+pnpm generate-migration
+```
+
+To apply migrations, there is a separate tool inside of `drizzle-orm/node-postgres/migrator` that we can use to apply migrations. Let's write a script that applies any new migrations from our migrations folder.
+
+Create a file `src/db/migrate.ts` and put this in it:
+
+```typescript
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { db } from "./db";
+
+// this will automatically run needed migrations on the database
+migrate(db, { migrationsFolder: "./src/db/migrations" })
+  .then(() => {
+    console.log("Migrations complete!");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Migrations failed!", err);
+    process.exit(1);
+  });
+```
+
+Now add a script to your `package.json`:
+
+```json
+"migrate": "ts-node src/db/migrate"
+```
+
+Now we can run `pnpm migrate` and it will apply our schema to the database. Afterwards, if you refresh your database in railway.app, you should see the table we created.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681915493/ccml5mjmlkqy3srarkft.png"
+  width="400"
+  alt="The users table in railway.app"
+/>
+
+A big part of my typical prisma workflow involves applying migrations on deploy. I'm going to show you how to do that with drizzle as well.
+
+## Ready... (Github) Action! 🎬
+
+Let's write a github action that will run our migrations on deploy. Create a file `.github/workflows/deploy.yml` and put this in it:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+      - run: npm install -g pnpm
+      - run: pnpm install
+      - run: pnpm migrate
+```
+
+Now, whenever we push to main, our github action will run `pnpm migrate` and apply our schema to the database.
+
+Before we can test this, we need to ensure that our `DATABASE_URL` is set in our github action. We can do that by going to our repository settings and adding a secret called `DATABASE_URL` with the value of our connection string.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681916590/kl1qjzlhqo38akc5hotc.png"
+  width="750"
+  alt="Adding a secret to our github repository"
+/>
+
+Success!
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681915493/mzvzwuaj6zepc44c7cm6.png"
+  width="600"
+  alt="The github action running on push to main"
+/>
+
+## Making schema changes
+
+Now in order to test our migrations, let's replace the `phone` column with a `createdAt` column to our `users` table. This column should have a default value of `now()`.
+
+```typescript
+import { pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+
+// schema.ts
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  fullName: text("full_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+```
+
+Now we need to generate a new migration (remember this is only half of the process!):
+
+```
+pnpm generate-migration
+```
+
+Now, let's commit our changes and push them to github. Our github action will run and apply our new migration to the database. If we refresh our database in railway.app, we should see the new column! ✨
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1681915493/p26dqujqzgox3wjthk7c.png"
+  width="800"
+  alt="The users table in railway.app with the new column"
+/>
+
+## Using our database
+
+The last thing we need to confirm is that we truly have a typesafe-client. Let's add a script to `src/demo.ts` that will select all users from the database.
+
+```typescript
+import { db } from "./db/db";
+import * as schema from "./db/schema";
+
+(async () => {
+  const users = await db.select().from(schema.users);
+  console.log(users);
+  process.exit(0);
+})();
+```
+
+Now let's run it:
+
+```
+pnpm ts-node src/demo.ts
+```
+
+We should see an empty array printed to the console. This is because we haven't added any users to the database yet. Let's add a function to add a new user. Check out how we can infer the insertion type using drizzle-orm's `InferModel` type.
+
+We will also read the first command line argument as the user's name.
+
+```typescript
+import { InferModel } from "drizzle-orm";
+import { db } from "./db/db";
+import * as schema from "./db/schema";
+
+async function createUser(user: InferModel<typeof schema.users, "insert">) {
+  const response = await db.insert(schema.users).values(user).returning();
+
+  // we know that the response will be an array of one element
+  return response[0].id;
+}
+
+(async () => {
+  // pull name from command line
+  const name = process.argv[2];
+  if (!name) {
+    console.error("Please provide a name");
+    process.exit(1);
+  }
+
+  // create a new user
+  const id = await createUser({ fullName: name });
+  console.log(`Created user with id ${id}`);
+
+  const users = await db.select().from(schema.users);
+  console.log(users);
+
+  process.exit(0);
+})();
+```
+
+Now let's run it:
+
+```
+pnpm ts-node src/demo.ts "John Doe"
+```
+
+We should see a new user created in our database and printed to the console.
+
+## Conclusion
+
+Here's one more link to the [final code](https://github.com/tone-row/drizzle-demo). Overall, my experience using drizzle as a prisma alternative was mixed. 🤔
+
+The schema is expressive and seems ready to use in production, but type-safety seems to come with a bit more manual work. On the other hand, typesafety with the prisma client requires "codegen"-ing the client when you make changes (not to mention in your builds), so you could make the argument that drizzle typesafety is simpler in some ways.
+
+In terms of migrations, I do wish it was possible in one step with the Drizzle CLI instead of two, using two separate packages.
+
+I'm interested to see how Drizzle's adoption grows. If it has super smooth integrations with things like next-auth and trpc that could further tip the scales in its favor.
+
+Let me know what you think on twitter [@tone_row\_](https://twitter.com/tone_row_).
+
+Thanks for reading!
+
+## Updates
+
+After posting this, I got a few notes about things there were already available or in the works:
+
+- [Drizzle Zod](https://github.com/drizzle-team/drizzle-orm/tree/main/drizzle-zod) - generate zod schemas from your drizzle schema
+- [Tweet from Drizzle](https://twitter.com/DrizzleOrm/status/1648987584054407168) - they're aiming for first-class support for TRPC 🙌
+- [Next-Auth Adapter](https://github.com/anthonyshew/next-auth/blob/main/packages/adapter-drizzle-pg/src/index.ts) - unmerged for now but it's coming!
+
+Thanks everyone who gave resources and feedback!

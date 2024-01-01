@@ -1,0 +1,174 @@
+---
+title: A Pinch of Typescript in Javascript
+pubDate: 2022-10-26
+description: "Type-checking in Javascript: The Benefits and How to Implement it"
+heroImage: '/blog-placeholder-3.jpg'
+---
+
+I love Typescript and write **a lot** of it, but sometimes when I want to test an idea quickly scaffolding a Typescript project takes a little bit too long. In these cases, I prefer to work with my old friend, Javascript.
+
+Recently, I was testing an idea for a browser extension, so I started coding with my old friend, Javascript, but as my code grew more complex I wanted some of that good old-fashioned type-safety&trade; to _validate my assumptions_; i.e., get my code to work.
+
+So, I just added a pinch of Typescript, and I was good to go.
+
+<img
+  src="https://media4.giphy.com/media/l4Jz3a8jO92crUlWM/giphy.gif?cid=ecf05e477gixjt5tnffqhkd0s49ste34s5ga1heb49mb63uv&rid=giphy.gif&ct=g"
+  alt="Salt Bae"
+/>
+
+Wait a minute– A pinch of Typescript? In Javascript!? Let me explain.
+
+## Adding a Bit of Typescript to Javascript
+
+First, you need to be using VS Code. VS Code has an internal Typescript server which is always available to check your code.
+
+Second, you need a way to talk about types. `const n: number = 555` isn't valid javascript, so we'll need another way to describe types. For this we can use [JSDoc](https://jsdoc.app/): a way of annotating Javascript code inside of comments.
+
+Finally, you need to connect these two together.
+
+## Connecting the dots
+
+There are two ways to tell VS Code’s server to Look Alive!
+
+We can check individual files by adding a `// @ts-check` comment at the top of the file. This will tell the server to check the file for errors.
+
+```js
+// @ts-check
+
+// ... your code here
+```
+
+We can also check the entire project by adding a `jsconfig.json` file to the root of the project. This will tell the server to check all files in the project for errors.
+
+```json
+{
+  "compilerOptions": {
+    "checkJs": true
+  }
+}
+```
+
+Now we're ready to start adding types to our Javascript code 🎉
+
+## My Go-To Uses
+
+For me, checking types in JavaScript is about having _just enough_ types to validate assumptions, while still keeping my setup loosey-goosey.
+
+With that said, here are the ways I use this most often:
+
+### Comments To-Go
+
+This may seem weird, using JSDoc _just_ for commenting is great because comments follow the variable or function they describe.
+
+If I forget why I needed this variable or function tomorrow, now all I need to do is hover and I'll get a reminder.
+
+This works great for functions/variables that are used in multiple places.
+
+<img
+  alt="JSDoc annotations to remember why I created something"
+  src="https://res.cloudinary.com/tone-row/image/upload/v1666794751/tone-row-2021/pmniu3x9jvc6zqh45org.png"
+/>
+
+### Typing Arguments
+
+Better safe than sorry!
+
+```js
+/**
+ * @param {string} name
+ * @param {number} age
+ **/
+function sayHello(name, age) {
+  console.log(`Hello, ${name}! You are ${age} years old.`);
+}
+```
+
+### Typing Function Return Values
+
+Ok, I'll admit it: Typescript catches edge cases that I would never think of.
+
+```js
+/**
+ * @returns {number}
+ **/
+function returnANumberPlease(a, b) {
+  return a + b;
+}
+```
+
+<img
+  alt="catching errors by typing fn returns"
+  src="https://res.cloudinary.com/tone-row/image/upload/v1666795244/tone-row-2021/m2o8g4drlxiediqwdojr.png"
+/>
+
+### Type Assertions
+
+Sometimes you just want to explain what type a variable will store.
+
+```js
+/** @type {number[]} **/
+let myNumberArr = [];
+```
+
+<img
+  src="only numbers going in this array"
+  src="https://res.cloudinary.com/tone-row/image/upload/v1666796005/tone-row-2021/mwvy8zuhkr6m2f8nsq4e.png"
+/>
+
+### Sharing Types Across Files
+
+Imagine you have a type with several properties that you want to use in multiple files. I find the way of defining types in JSDoc to be a bit verbose, so I prefer to define types in a separate file and import them.
+
+```ts
+// types.ts
+
+export type Person = {
+  name: string;
+  age: number;
+};
+
+export type Actor = Person & {
+  job: "actor";
+  movies: string[];
+};
+```
+
+Now, back in javascript-land I can do this:
+
+```js
+// @ts-check
+
+/** @type {import("./types").Actor} */
+let johnCusack = {
+  name: "John Cusack",
+  age: 53,
+  job: "actor",
+  movies: ["High Fidelity", "Say Anything", "Grosse Pointe Blank"],
+};
+```
+
+### Type Guards
+
+If you're not familiar with it, a type guard is a way to tell Typescript that you know what type a variable is if something about it is true.
+
+Taking our types from above, imagine we want to express that a type is an `Actor` if it has a `job` property equal to `"actor"`.
+
+```js
+/**
+ * @param {Person | Actor} person
+ * @returns {person is Actor}
+ */
+function isActor(person) {
+  return "job" in person && person.job === "actor";
+}
+```
+
+Now we can use that function elsewhere to tell Typescript that we know the variable in question is of the `Actor` type.
+
+## Conclusion
+
+In practice, Typescript and Javascript don't have to be completely separate worlds; instead, there's a spectrum between them.
+
+Hopefully this article will help you move between the two more easily– giving you more choices and confidence next time you sit down to code something. Thanks for reading!
+
+Let me know how you use Typescript in Javascript on Twitter [@tone_row\_](https://twitter.com/tone_row_)

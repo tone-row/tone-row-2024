@@ -1,0 +1,148 @@
+---
+title: Vite, Vercel Serverless, and Client-Side Routing
+pubDate: 2022-05-12
+description: Getting vercel dev to work with vite locally so serverless functions and client-side routing play nicely.
+heroImage: '/blog-placeholder-3.jpg'
+---
+
+[Vercel Serverless Functions](https://vercel.com/docs/concepts/functions) are an an indispensable tool for building apps on Vercel, and the only way to test them locally is with the CLI.
+
+`vercel dev` works perfectly with Next.js and create-react-app, but recently I came across a strange bug when using `vercel dev` with my vite application.
+
+Let's walk through the bug and then walkthrough the solution.
+
+## The Bug
+
+Imagine you have a vite app with client-side routing and a few routes deployed to Vercel, [like this one](https://routing-vite-vercel-serverless-miv42i8n3-tone-row.vercel.app/).
+
+Navigating with the links works great, but if you try to load a page other than the index Vercel gets confused. Try going directly to the [about page](https://routing-vite-vercel-serverless-miv42i8n3-tone-row.vercel.app/about).
+
+There's no file at `/about.html`, so instead we see an error from vercel.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1652373156/tone-row-2021/cunqqnyx6aqsasabacqu.png"
+  width="443"
+  alt="Vercel error"
+/>
+
+This is a common stumbling block for client-side routing. To fix it, we need to make sure any requests to our domain are redirected to `/index.html`. That way our application will load, which in turn loads our router, which in turn loads the correct page.
+
+To do this on vercel we use a `vercel.json` file with the following contents:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+If we deploy this, we can now load our pages directly. [Try it out!](https://routing-vite-vercel-serverless-kiocsreua-tone-row.vercel.app/about)
+
+## Vercel Dev
+
+Now, instead of running your app locally with `yarn dev`, try running `vercel dev`.
+
+You'll need to have have the [Vercel CLI](https://vercel.com/docs/cli) installed. The first time you run `vercel dev` you'll need to connect it to your deployment.
+
+When you see something like this in your console you'll know it's running as intended.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1652376162/tone-row-2021/ie3qr750vh5aknker3dz.png"
+  width="359"
+  alt="Vercel dev running vite"
+/>
+
+However, when you visit the address on localhost, you'll see our app is broken! 😱
+
+## What's the problem?
+
+Using `vercel.json` to fix routing on our deploys breaks our routing locally. I reached out to Vercel about this problem. They confirmed it's an issue and they also said it wasn't on their roadmap to fix it.
+
+But I love vite too much to give up!
+
+## The Quick Solution
+
+Rename `vercel.json` to `_vercel.json` then run `vercel dev` again and everything will be working.
+
+For about a week I attempted to remember to keep `vercel.json` renamed locally– but to avoid committing that change so as not to break routing.
+
+Lo and behold... I broke my app a few times. So then the question became: how can I prevent myself from accidentally committing the `vercel.json → _vercel.json` change?
+
+## Git Hooks: The Sustainable Solution
+
+If you’re not familiar with git hooks, they let you run code whenever you run git commands. They have names like “pre-commit” (i.e., before the code is committed) or “post-receive”, and they live inside your hidden `.git` directory along with all the other git guts.
+
+My idea was to:
+
+- Prevent `_vercel.json` from being committed using `.gitignore`
+- Prevent the deletion of `vercel.json` from being committed by using a `pre-commit` hook:
+
+The git ignore part is easy. We just add `_vercel.json` to the `.gitignore` file.
+
+```bash
+# Don't commit unused routing file
+_vercel.json
+```
+
+For the pre-commit hook, we can add a small script in the root of our project called `prevent-delete.sh` (or whatever you like) with the following contents:
+
+```bash
+# Prevent deletion of vercel.json from being committed
+
+#D       vercel.json
+REGEXP="^D[[:space:]]+vercel.json$"
+
+if git diff --cached --name-status | grep -qE $REGEXP; then
+  git reset -- vercel.json
+  exit 0
+fi
+```
+
+This script looks for a line that starts with `D` and then checks if it contains `vercel.json`. If it does, it resets the file to its original state, which in our case is deleted but not staged.
+
+We need to make sure our script is executable by git so we run:
+
+```bash
+chmod +x prevent-delete.sh
+```
+
+Then we create a symlink from the git hooks directory to our script. Note– Don't do this if your app is already setup with `husky`; see below.
+
+```bash
+ln -s ../../prevent-delete.sh .git/hooks/pre-commit
+```
+
+Now if we add all our changes with `git add -A` and run `git status` we can see that `_vercel.json` is being ignored, and the delete of `vercel.json` is staged to be committed.
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1652377996/tone-row-2021/wrqprr2uifzjjzwsr23w.png"
+  width="377"
+  alt="Git status after add"
+/>
+
+But, when we run `git commit -m "Add prevent-delete.sh"` we get the following output:
+
+<img
+  src="https://res.cloudinary.com/tone-row/image/upload/v1652378121/tone-row-2021/oqaxkibbr4ft2qh12g89.png"
+  width="356"
+  alt="Git commit output"
+/>
+
+Success! If you check `git status` again you'll see that the deletion of vercel.json wasn't committed. We can safely push this code knowing the deployment vercel creates won't have broken routing because of a missing `vercel.json` file.
+
+## If you are using husky
+
+Many apps use [husky](https://github.com/typicode/husky) to automatically run git hooks. This is the recommended pathway for things like linting staged files.
+
+If you're using husky, instead of symlinking the script, just run
+
+```bash
+npx husky add .husky/pre-commit "./prevent-delete.sh"
+```
+
+This will add the script to the `pre-commit` hook.
+
+## In conclusion
+
+That's it! Now you can `git add -A` and `git commit` to your heart's content without being worried about breaking your application. 🎉🎉🎉
+
+Thanks for reading! If you have questions reach out to me on [Twitter](https://twitter.com/tone_row_)

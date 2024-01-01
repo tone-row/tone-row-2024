@@ -1,0 +1,96 @@
+---
+import BaseHead from "../components/BaseHead.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { SITE_TITLE, SITE_DESCRIPTION } from "../consts";
+import { getCollection } from "astro:content";
+const projects = (await getCollection("projects")).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const tags = await getCollection("tags");
+const tagsBySlug = tags.reduce(
+  (acc, tag) => {
+    acc[tag.slug] = tag;
+    return acc;
+  },
+  {} as Record<string, (typeof tags)[0]>
+);
+
+const projectsByYear = projects.reduce(
+  (acc, project) => {
+    const year = project.data.pubDate.getFullYear();
+    if (!acc[year]) {
+      acc[year] = [];
+    }
+    acc[year]!.push(project);
+    return acc;
+  },
+  {} as Record<number, (typeof projects)[0][]>
+);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+  </head>
+  <body
+    class="bg-background text-foreground dark:bg-foreground dark:text-background"
+  >
+    <Header title={SITE_TITLE} />
+    <main class="grid p-4 md:p-8 content-start max-w-9xl mx-auto">
+      <p
+        class="font-serif text-[clamp(1.5rem,4vw,5rem)] tracking-tight max-w-2xl md:max-w-[1400px] leading-tight balance"
+      >
+        Tone Row is a space for web development and tools-for-thought research.
+        We build tools to help people think and create.
+      </p>
+
+      <div class="grid gap-6">
+        <h2 class="text-2xl mt-9">Projects / Software / Research</h2>
+        {
+          Object.keys(projectsByYear)
+            .sort()
+            .reverse()
+            .map((year) => (
+              <div>
+                <span class="text-3xl mb-3">{year}</span>
+                <div class="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {projectsByYear[
+                    Number(year) as keyof typeof projectsByYear
+                  ]?.map((project) => (
+                    <a
+                      href="#"
+                      class="rounded-lg p-3 border border-neutral-200 text-neutral-700 shadow-[2px_2px] shadow-neutral-200"
+                    >
+                      <h3 class="text-2xl font-bold mb-2">
+                        {project.data.title}
+                      </h3>
+                      {project.data.tags ? (
+                        <div class="flex flex-wrap gap-3">
+                          {project.data.tags.map((tag) => (
+                            <span
+                              class="text-xs text-neutral-500 tracking-wider uppercase font-bold"
+                              data-tag={tag.slug}
+                            >
+                              {tagsBySlug[tag.slug]?.data.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      <p class="mt-4 tracking-wide text-neutral-600">
+                        {project.data.description}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))
+        }
+      </div>
+    </main>
+    <Footer />
+  </body>
+</html>

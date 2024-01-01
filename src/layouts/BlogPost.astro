@@ -1,0 +1,76 @@
+---
+import type { CollectionEntry } from "astro:content";
+import BaseHead from "../components/BaseHead.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import FormattedDate from "../components/FormattedDate.astro";
+
+type Props = CollectionEntry<"blog">["data"];
+
+const { title, description, pubDate, updatedDate } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} />
+  </head>
+
+  <body
+    class="bg-background text-foreground dark:bg-foreground dark:text-background flex flex-col min-h-screen"
+  >
+    <Header />
+    <main class="flex-grow">
+      <article class="px-8">
+        <!-- <div class="hero-image">
+          {
+            heroImage && (
+              <img
+                src={heroImage}
+                alt=""
+                class="mx-auto w-full h-[400px] object-cover object-center"
+              />
+            )
+          }
+        </div> -->
+        <div class="prose lg:prose-lg mx-auto mt-16">
+          <div class="title pb-4">
+            <h1 class="font-extrabold !mb-6 !leading-[1.2] balance">
+              {title}
+            </h1>
+            <p
+              class="border-2 border-foreground flat-shadow text-xl text-neutral-800 p-3 px-4 !my-0 rounded-xl leading-[1.5] tracking-wide rotate-[-1deg]"
+            >
+              {description}
+            </p>
+          </div>
+          <div
+            class="date border-t text-sm font-bold py-2 my-8 flex justify-end"
+          >
+            <span>
+              <FormattedDate date={pubDate} />
+              {
+                updatedDate && (
+                  <div class="last-updated-on">
+                    Last updated on <FormattedDate date={updatedDate} />
+                  </div>
+                )
+              }
+            </span>
+          </div>
+          <div>
+            <slot />
+          </div>
+        </div>
+      </article>
+    </main>
+    <Footer />
+    <style>
+      .prose img {
+        max-width: 100%;
+        margin-inline: auto;
+        border-radius: 0.25rem;
+        border: 1px solid black;
+      }
+    </style>
+  </body>
+</html>
