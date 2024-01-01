@@ -18,9 +18,7 @@ const posts = (await getCollection("blog")).sort(
     <GoogleAnalytics />
     <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
   </head>
-  <body
-    class="flex flex-col min-h-screen bg-background text-foreground dark:bg-foreground dark:text-background"
-  >
+  <body class="flex flex-col min-h-screen bg-background text-foreground">
     <Header />
     <main class="max-w-4xl mx-auto flex-grow p-4 md:p-8">
       <section>

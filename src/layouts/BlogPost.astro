@@ -17,9 +17,7 @@ const { title, description, pubDate, updatedDate } = Astro.props;
     <BaseHead title={title} description={description} />
   </head>
 
-  <body
-    class="bg-background text-foreground dark:bg-foreground dark:text-background flex flex-col min-h-screen"
-  >
+  <body class="bg-background text-foreground flex flex-col min-h-screen">
     <Header />
     <main class="flex-grow">
       <article class="px-8">
