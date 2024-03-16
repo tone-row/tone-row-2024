@@ -8,7 +8,8 @@ export default {
         serif: ["PP Editorial New", "serif"],
       },
       colors: {
-        background: "#fefdf8",
+        // background: "#fefdf8",
+        background: "#fefefc",
         foreground: "#292f30",
         neutral: {
           50: "#fbfaf5",

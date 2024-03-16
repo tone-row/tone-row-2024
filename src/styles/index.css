@@ -60,17 +60,29 @@ html {
 }
 
 [data-tag="library"] {
-  @apply text-green-600;
+  @apply bg-green-600/20;
 }
 
 [data-tag="software"] {
-  @apply text-blue-600;
+  @apply bg-blue-600/20;
 }
 
 [data-tag="side-project"] {
-  @apply text-yellow-600;
+  @apply bg-yellow-600/20;
 }
 
 [data-tag="ai"] {
-  @apply text-red-600;
+  @apply bg-red-600/20;
+}
+
+[data-tag="collaboration"] {
+  @apply bg-purple-600/20;
+}
+
+[data-tag="deprecated"] {
+  @apply bg-neutral-600/20;
+}
+
+.text-wrap-balance {
+  text-wrap: balance;
 }
