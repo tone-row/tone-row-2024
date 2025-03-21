@@ -56,7 +56,12 @@ const projectsByYear = projects.reduce(
               .reverse()
               .map((year) => (
                 <div>
-                  <h2 class="text-4xl blur-[3px] mb-8 font-serif">{year}</h2>
+                  <marquee scrollamount="2" class="mb-8">
+                    <h2 class="text-4xl font-serif opacity-15 inline-block">
+                      {Array.from({ length: 20 }, () => year).join(" ")}
+                    </h2>
+                  </marquee>
+
                   <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-y-16">
                     {projectsByYear[
                       Number(year) as keyof typeof projectsByYear
