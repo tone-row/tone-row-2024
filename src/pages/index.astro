@@ -37,60 +37,60 @@ const projectsByYear = projects.reduce(
     <GoogleAnalytics />
     <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
   </head>
-  <body class="bg-background text-foreground">
+  <body class="text-foreground">
     <Header title={SITE_TITLE} />
-    <main class="grid p-4 md:p-8 content-start max-w-[1600px] mx-auto">
+    <main class="grid p-4 md:p-8 content-start max-w-[1100px] mx-auto">
       <p
-        class="font-serif text-[clamp(1.75rem,3.5vw,5rem)] tracking-tight max-w-2xl md:max-w-[1400px] leading-tight balance"
+        class="font-serif text-[clamp(1.75rem,3.7vw,6rem)] leading-tight pretty mb-12"
       >
         Tone Row is a space for web development and tools-for-thought research.
         We build tools to help people think and create.
       </p>
 
       <div class="grid gap-6">
-        <h2 class="text-lg mt-9 mb-5">Projects / Software / Research</h2>
-        <div class="grid gap-16">
+        <div class="flex items-center gap-4">
+          <img src="/shooting-star.webp" alt="Shooting Star" class="w-24" />
+          <h2 class="text-lg">Projects / Software / Research</h2>
+        </div>
+        <div class="grid gap-8">
           {
             Object.keys(projectsByYear)
               .sort()
               .reverse()
               .map((year) => (
-                <div>
-                  <marquee scrollamount="2" class="mb-8">
-                    <h2 class="text-4xl font-serif opacity-15 inline-block">
-                      {Array.from({ length: 20 }, () => year).join(" ")}
-                    </h2>
-                  </marquee>
+                <div class="overflow-hidden">
+                  <h2 class="text-xs tracking-widest tabular-nums font-mono text-indigo-700/10 inline-block whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                    {Array.from({ length: 36 }, () => year).join("")}
+                  </h2>
 
-                  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-y-16">
+                  <div class="grid md:grid-cols-2 lg:grid-cols-3 -mx-4">
                     {projectsByYear[
                       Number(year) as keyof typeof projectsByYear
                     ]?.map((project) => (
                       <a
                         href={project.data.url ?? "#"}
                         target={project.data.url ? "_blank" : "_self"}
-                        class="text-neutral-700"
+                        class="text-neutral-700 grid gap-2 content-start hover:bg-neutral-100 p-4 rounded-md"
                       >
+                        <h3 class="text-3xl mt-1 mb-1">{project.data.title}</h3>
+                        <p class="tracking-wide text-neutral-600 text-lg leading-tight mb-2 text-pretty">
+                          {project.data.description}
+                        </p>
                         {project.data.tags ? (
                           <div class="flex flex-wrap gap-1">
                             {project.data.tags.map((tag) => (
                               <span
-                                class="text-xs  p-1 px-1.5 rounded-full"
+                                class="text-xs text-white font-bold tracking-wide p-1 px-2 rounded-full"
                                 data-tag={tag.slug}
+                                style={{
+                                  transform: `rotate(${-5 + Math.random() * 10}deg)`,
+                                }}
                               >
-                                <span class="mix-blend-difference text-orange-500">
-                                  {tagsBySlug[tag.slug]?.data.name}
-                                </span>
+                                <span>{tagsBySlug[tag.slug]?.data.name}</span>
                               </span>
                             ))}
                           </div>
                         ) : null}
-                        <h3 class="text-2xl font-bold mt-1 mb-1">
-                          {project.data.title}
-                        </h3>
-                        <p class="tracking-wide text-neutral-600 text-lg leading-tight text-wrap-balance">
-                          {project.data.description}
-                        </p>
                       </a>
                     ))}
                   </div>

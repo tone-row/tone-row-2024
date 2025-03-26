@@ -17,7 +17,7 @@ const { title, description, pubDate, updatedDate } = Astro.props;
     <BaseHead title={title} description={description} />
   </head>
 
-  <body class="bg-background text-foreground flex flex-col min-h-screen">
+  <body class="text-foreground flex flex-col min-h-screen">
     <Header />
     <main class="flex-grow">
       <article class="px-8">
@@ -38,7 +38,7 @@ const { title, description, pubDate, updatedDate } = Astro.props;
               {title}
             </h1>
             <p
-              class="border-2 border-foreground flat-shadow text-xl text-neutral-800 p-3 px-4 !my-0 rounded-xl leading-[1.5] tracking-wide rotate-[-1deg]"
+              class="border-2 border-foreground flat-shadow text-lg text-center text-neutral-800 p-3 px-4 !my-0 rounded-xl leading-[1.5] tracking-wide rotate-[-1deg]"
             >
               {description}
             </p>
